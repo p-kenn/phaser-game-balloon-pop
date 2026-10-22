@@ -110,7 +110,7 @@ export class MainScene extends Phaser.Scene {
     const x = Phaser.Math.Between(40, 320);
     const balloon: Phaser.Physics.Arcade.Image = this.balloons.create(x, 700, "balloon");
 
-    const isGold = Math.random() > 0.25;
+    const isGold = Math.random() < 0.25;
     this.setBalloonProperty(balloon, isGold);
 
     // 丸い部分だけをさわれるようにする
