@@ -1,16 +1,49 @@
 import Phaser from "phaser";
-import { useEffect, useRef } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 
-import { GameScene } from "./scenes/GameScene";
+import { EventBus } from "./EventBus";
+import { MainScene } from "./scenes/MainScene";
 
-export function PhaserGame() {
-  const boxRef = useRef<HTMLDivElement>(null);
+export interface IRefPhaserGame {
+  game: Phaser.Game | null;
+  scene: Phaser.Scene | null;
+}
+
+interface IProps {
+  currentActiveScene?: (scene_instance: Phaser.Scene) => void;
+}
+
+export const PhaserGame = forwardRef<IRefPhaserGame, IProps>(function PhaserGame(
+  { currentActiveScene },
+  ref,
+) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const game = useRef<Phaser.Game | null>(null);
+  const scene = useRef<Phaser.Scene | null>(null);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      get game() {
+        return game.current;
+      },
+      get scene() {
+        return scene.current;
+      },
+    }),
+    [],
+  );
 
   useEffect(() => {
-    // この部品が画面に出たら、箱の中に Phaser のゲームを作る
-    const game = new Phaser.Game({
+    if (!containerRef.current) return;
+
+    // Reactの再レンダリングや二重実行を防ぐガード
+    if (game.current) return;
+
+    // Phaserゲームの設定
+    const config: Phaser.Types.Core.GameConfig = {
       type: Phaser.AUTO,
-      parent: boxRef.current,
+      parent: containerRef.current,
       width: 360,
       height: 640,
       backgroundColor: "#e0f2fe",
@@ -28,14 +61,29 @@ export function PhaserGame() {
           debug: false,
         },
       },
-      scene: [GameScene],
-    });
-
-    // この部品が消えるときに、ゲームも片づける
-    return () => {
-      game.destroy(true);
+      scene: [MainScene],
     };
-  }, []);
 
-  return <div ref={boxRef} />;
-}
+    game.current = new Phaser.Game(config);
+
+    const onSceneReady = (sceneInstance: Phaser.Scene) => {
+      scene.current = sceneInstance;
+      if (currentActiveScene) {
+        currentActiveScene(sceneInstance);
+      }
+    };
+
+    EventBus.on("current-scene-ready", onSceneReady);
+
+    // コンポーネントが破棄されたらゲームインスタンスも片付ける
+    return () => {
+      EventBus.off("current-scene-ready", onSceneReady);
+      if (game.current) {
+        game.current.destroy(true);
+        game.current = null;
+      }
+    };
+  }, [currentActiveScene]);
+
+  return <div ref={containerRef} className="h-full w-full" />;
+});

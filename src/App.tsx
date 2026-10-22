@@ -1,17 +1,22 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { EventBus } from "./EventBus";
-import { PhaserGame } from "./PhaserGame";
+import { type IRefPhaserGame, PhaserGame } from "./PhaserGame";
 import { ResultScreen } from "./ResultScreen";
 import { TitleScreen } from "./TitleScreen";
 
 type Screen = "title" | "playing" | "result";
 
+const TIME_LIMIT = 30;
+
 export default function App() {
   const [screen, setScreen] = useState<Screen>("title");
   const [score, setScore] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(30);
+  const [timeLeft, setTimeLeft] = useState(TIME_LIMIT);
   const [best, setBest] = useState(0);
+
+  // 子コンポーネント（PhaserGame）の game インスタンスや scene への参照
+  const phaserRef = useRef<IRefPhaserGame | null>(null);
 
   useEffect(() => {
     const onEnd = (final: number) => {
@@ -34,27 +39,26 @@ export default function App() {
 
   function start() {
     setScore(0);
-    const timeLimit = 7;
-    setTimeLeft(timeLimit);
+    setTimeLeft(TIME_LIMIT);
     setScreen("playing");
 
     // Phaser にゲーム開始のイベントを送信
-    EventBus.emit("game:start", { timeLimit });
+    EventBus.emit("game:start", { timeLimit: TIME_LIMIT });
   }
 
   return (
-    <main className="relative h-screen w-screen overflow-hidden bg-black">
-      {/* 1. Phaser（ゲーム本体）は常に一番奥に常駐させる */}
+    <main className="relative h-screen w-screen overflow-hidden bg-slate-900">
+      {/* 1. Phaser（ゲーム本体） */}
       <div className="absolute inset-0">
-        <PhaserGame />
+        <PhaserGame ref={phaserRef} />
       </div>
 
       {/* 2. プレイ中の HUD（スコア・残り時間） */}
       {screen === "playing" && (
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-between px-4 py-3 text-xl font-bold text-white">
+        <header className="pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-between px-4 py-3 text-xl font-bold text-white">
           <span>スコア {score}</span>
           <span>のこり {timeLeft}秒</span>
-        </div>
+        </header>
       )}
 
       {/* 3. 前面に被せる React の画面（タイトル / リザルト） */}
