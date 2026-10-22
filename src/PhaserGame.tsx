@@ -1,28 +1,25 @@
 import Phaser from "phaser";
 import { useEffect, useRef } from "react";
 
-import { MainScene } from "./scenes/MainScene";
+import { GameScene } from "./scenes/GameScene";
 
 export function PhaserGame() {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const gameRef = useRef<Phaser.Game | null>(null);
+  const boxRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!containerRef.current) return;
-
-    // Reactの再レンダリングや二重実行を防ぐガード
-    if (gameRef.current) return;
-
-    // Phaserゲームの基本設定
-    const config: Phaser.Types.Core.GameConfig = {
+    // この部品が画面に出たら、箱の中に Phaser のゲームを作る
+    const game = new Phaser.Game({
       type: Phaser.AUTO,
-      parent: containerRef.current,
-      width: 800,
-      height: 600,
-      backgroundColor: "#1e293b", // Tailwind slate-800
+      parent: boxRef.current,
+      width: 360,
+      height: 640,
+      backgroundColor: "#e0f2fe",
       scale: {
         mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH,
+      },
+      input: {
+        activePointers: 3,
       },
       physics: {
         default: "arcade",
@@ -31,19 +28,14 @@ export function PhaserGame() {
           debug: false,
         },
       },
-      scene: [MainScene],
-    };
+      scene: [GameScene],
+    });
 
-    gameRef.current = new Phaser.Game(config);
-
-    // コンポーネントが破棄されたらゲームインスタンスも片付ける
+    // この部品が消えるときに、ゲームも片づける
     return () => {
-      if (gameRef.current) {
-        gameRef.current.destroy(true);
-        gameRef.current = null;
-      }
+      game.destroy(true);
     };
   }, []);
 
-  return <div ref={containerRef} className="h-full w-full" />;
+  return <div ref={boxRef} />;
 }
